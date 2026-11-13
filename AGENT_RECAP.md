@@ -1,21 +1,5 @@
 # Agent Recap — Heat Liga (PHP)
 
-Handoff notes for the next agent continuing work on the PHP app in this
-folder. Session of 2026-11-13: Flask→PHP port, player leaderboard, roles
-framework (dormant), JSON→SQLite storage migration.
-
-## TL;DR
-
-- **This folder is the active app.** The original Flask app in the parent
-  directory (`../app.py`, `../index.html`, `../data.json`) is legacy — do NOT
-  modify it ("PHP only!" was an explicit user instruction).
-- The user has **no PHP installed** — the agent must verify all work via
-  Docker (setup below). The user tests the UI in a browser at
-  http://127.0.0.1:8000, sometimes *while the agent is working* — data file
-  can change out from under you; re-read before writing.
-- Live data: **`data.sqlite`** (SQLite). **`data.json.bak`** is the
-  pre-migration backup and the restore source (real league data — protect it).
-
 ## Files
 
 | file          | what                                                        |
@@ -23,44 +7,8 @@ framework (dormant), JSON→SQLite storage migration.
 | index.php     | entry point: serves index.html, routes any `.../api` path to api.php |
 | api.php       | all backend logic: 17 actions, leaderboard, input validation, dispatch. Contains the commented-out roles framework |
 | storage.php   | storage layer (SQLite). Contract: `storage_load(): array` / `storage_save(array $d): void`. Replace this file to swap databases |
-| migrate.php   | one-time JSON → SQLite import: `php migrate.php [--force] [source.json]` |
 | index.html    | SPA frontend, vanilla JS, Czech UI (copied from original, unchanged) |
-| data.sqlite   | the database — all app data                                 |
-| data.json.bak | backup of the pre-migration JSON (not read by the app)      |
 | .htaccess     | Apache routing (for XAMPP/htdocs deployments)               |
-| README.md     | run instructions                                            |
-
-## How to run / test (no PHP on this PC)
-
-```bash
-# 1. Docker Desktop may be stopped — start it and wait for the engine:
-powershell -NoProfile -Command "Start-Process 'C:\Program Files\Docker\Docker\Docker Desktop.exe'"
-docker info   # retry until it works
-
-# 2. Lint (no server needed):
-MSYS_NO_PATHCONV=1 docker run --rm -v "C:\Users\lumi\NotProjects\HEAT\heat-php":/app -w /app php:8.2-cli php -l /app/api.php
-
-# 3. One-shot scripts (migrate, dump DB):
-MSYS_NO_PATHCONV=1 docker run --rm -v "C:\Users\lumi\NotProjects\HEAT\heat-php":/var/www/html -w /var/www/html php:8.2-cli php migrate.php --force data.json.bak
-
-# 4. Run the app (bind-mounted — code edits are live immediately, no restart):
-MSYS_NO_PATHCONV=1 docker run -d --rm --name heat-php -p 8000:8000 -v "C:\Users\lumi\NotProjects\HEAT\heat-php":/var/www/html -w /var/www/html php:8.2-cli php -S 0.0.0.0:8000 index.php
-
-# Stop when done:
-docker stop heat-php
-```
-
-Gotchas:
-- **Git Bash mangles unix-style paths in docker args** (`-w /app` becomes
-  `C:/Program Files/Git/app`). Prefix docker commands with
-  `MSYS_NO_PATHCONV=1`.
-- `php:8.2-cli` image has pdo_sqlite + sqlite3 enabled (verified).
-- PHP built-in server: no opcache — editing api.php/storage.php is picked up
-  on the next request.
-- For tests: write Python scripts to a **file** and run them (long inline
-  heredocs break bash quoting). Python 3 is available on the host; curl too.
-- SQLite runs over the Docker-for-Windows bind mount: keep default journal
-  mode + `busy_timeout` (already set); don't enable WAL over the share.
 
 ## Domain rules (scoring — the part most likely to get changed)
 
@@ -149,26 +97,5 @@ Semantics (tested: 16/16 scenarios):
    (keep the `storage_load`/`storage_save` contract).
 3. Optional: client-side UI adaptation for view-only (hide/disable edit
    controls) — would need the role exposed to the frontend (e.g. in `state`).
-4. Flask original is untouched legacy; decide whether to retire it.
-5. No real auth, no deployment story beyond `php -S` / htdocs — both
+4. No real auth, no deployment story beyond `php -S` / htdocs — both
    delegated to the bigger app.
-
-## What was done this session (chronological)
-
-1. Ported the Flask app 1:1 to PHP (same endpoints, same error strings,
-   same data semantics); frontend copied verbatim. Verified end-to-end in
-   Docker (the user has no PHP).
-2. Added per-player leaderboard table (second card on the Žebříček tab).
-3. Applied the "7 best matches" rule to player points too (user request).
-4. Built + tested the roles framework (modify / view-only), then commented
-   it out per user request ("to be plugged in bigger app").
-5. Migrated storage from data.json to SQLite (schema in storage.php),
-   one-time migration of live data, full regression (35/35), data.json
-   kept as data.json.bak.
-
-## Verification bar (what worked for this user)
-
-The user cannot test PHP themselves, so every change was verified before
-reporting: `php -l`, running server, API-level tests (python + urllib),
-board values recomputed independently, error paths, and data restored after
-destructive tests. Keep doing this — it was implicitly accepted.
