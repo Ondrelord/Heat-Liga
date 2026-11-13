@@ -83,6 +83,14 @@ footer{text-align:center;color:var(--dim);font-size:13px;padding:10px 0 30px}
       </table>
       <p class="note">V každém závodu se počítá jen nejlépe postavený člen týmu. Každý tým započítá jen svých 7 nejlepších závodů.</p>
     </div>
+    <div class="card">
+      <h2>Žebříček hráčů</h2>
+      <table class="tbl">
+        <thead><tr><th>#</th><th>Hráč</th><th>Tým</th><th>Závody</th><th>Body</th></tr></thead>
+        <tbody id="board-players"></tbody>
+      </table>
+      <p class="note">Každý hráč započítá jen svých 7 nejlepších závodů.</p>
+    </div>
   </section>
 
   <section id="tab-matches" class="tab">
@@ -234,6 +242,18 @@ function renderBoard() {
     : emptyRow(4, 'Zatím žádné týmy'));
 }
 
+function renderPlayerBoard() {
+  $('#board-players').innerHTML = (S.playerBoard || []).length
+    ? S.playerBoard.map((p, i) => `<tr>
+        <td class="rank r${i + 1}">${i + 1}</td>
+        <td class="name">${esc(p.name)}</td>
+        <td>${p.team ? esc(p.team) : '<span class="dim">&mdash;</span>'}</td>
+        <td class="dim">${p.matches}</td>
+        <td class="pts">${p.points}</td>
+      </tr>`).join('')
+    : emptyRow(5, 'Zatím žádní hráči');
+}
+
 /* ---------- matches ---------- */
 function matchCard(m) {
   const ranked = S.ranked[m.id] || [];
@@ -326,6 +346,7 @@ function renderMaps() {
 
 function renderAll() {
   renderBoard();
+  renderPlayerBoard();
   renderMatches();
   renderPlayers();
   renderTeams();
